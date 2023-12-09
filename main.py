@@ -66,7 +66,7 @@ def test_go(pose_landmarks):
     print("ls",lshoulder_pos)
     print("rs",rshoulder_pos)
 
-    if(is_point_inside_corners(lwrist_pos, rshoulder_pos, lshoulder_pos) or
+    if(is_point_inside_corners(lwrist_pos, rshoulder_pos, lshoulder_pos) and
         is_point_inside_corners(rwrist_pos, rshoulder_pos, lshoulder_pos)):
         return True
     else:
@@ -78,7 +78,7 @@ def is_point_inside_corners(point, corner1, corner2):
     x2, y2, z2 = corner2
 
     # Check if the point is within the cube's boundaries
-    return x1 <= x <= x2  and z1 <= z <= z2
+    return x1 <= x <= x2 # and z1 <= z <= z2
 
 def test_stop(pose_landmarks):
     left_shoulder = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
@@ -133,16 +133,60 @@ def check_hand_stop_raised(wrist, elbow, shoulder):
 
     return is_hand_raised
 
+def check_frame(frame,results):
+    if results.pose_landmarks:
+            if test_go(results.pose_landmarks):
+                cv2.putText(frame, 'MOVE FORWARD', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
+            elif test_left(results.pose_landmarks):
+                cv2.putText(frame, 'LEFT TURN', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
+            elif test_right(results.pose_landmarks):
+                cv2.putText(frame, 'RIGHT TURN', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
+            elif test_stop(results.pose_landmarks):
+                cv2.putText(frame, 'STOP SIGN', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
+
 if(static):
-    imp = cv2.imread('images/STOP_low_res.jpg')
-    image = cv2.cvtColor(imp, cv2.COLOR_BGR2RGB)
-    results = pose.process(image)
-    draw_landmarks(image, results)
+    fwd = cv2.imread('images/FORWARD.jpg')
+    fwd_im = cv2.cvtColor(fwd, cv2.COLOR_BGR2RGB)
+    fwd_results = pose.process(fwd_im)
+    draw_landmarks(fwd, fwd_results)
+    check_frame(fwd, fwd_results)
+    cv2.imshow('Forward Pose', fwd)
 
-    if (test_stop(results.pose_landmarks)):
-        cv2.putText(image, 'STOP', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+    left = cv2.imread('images/LEFT.jpg')
+    left_im = cv2.cvtColor(left, cv2.COLOR_BGR2RGB)
+    left_results = pose.process(left_im)
+    draw_landmarks(left, left_results)
+    check_frame(left, left_results)
+    cv2.imshow('LEFT Pose', left)
 
-    cv2.imshow("IMAGE", image)
+    right = cv2.imread('images/RIGHT.jpg')
+    right_im = cv2.cvtColor(right, cv2.COLOR_BGR2RGB)
+    right_results = pose.process(right_im)
+    draw_landmarks(right, right_results)
+    check_frame(right, right_results)
+    cv2.imshow('RIGHT Pose', right)
+
+    stopl = cv2.imread('images/STOP_LEFT.jpg')
+    stopl_im = cv2.cvtColor(stopl, cv2.COLOR_BGR2RGB)
+    stopl_results = pose.process(stopl_im)
+    draw_landmarks(stopl, stopl_results)
+    check_frame(stopl, stopl_results)
+    cv2.imshow('STOP_LEFT Pose', stopl)
+
+    stopr = cv2.imread('images/STOP_RIGHT.jpg')
+    stopr_im = cv2.cvtColor(stopr, cv2.COLOR_BGR2RGB)
+    stopr_results = pose.process(stopr_im)
+    draw_landmarks(stopr, stopr_results)
+    check_frame(stopr, stopr_results)
+    cv2.imshow('STOP_RIGHT Pose', stopr)
+
+    stop2 = cv2.imread('images/STOP2.jpg')
+    stop2_im = cv2.cvtColor(stop2, cv2.COLOR_BGR2RGB)
+    stop2_results = pose.process(stop2_im)
+    draw_landmarks(stop2, stop2_results)
+    check_frame(stop2, stop2_results)
+    cv2.imshow('STOP2 Pose', stop2)
+
     cv2.waitKey(0)
 
     cv2.destroyAllWindows()
