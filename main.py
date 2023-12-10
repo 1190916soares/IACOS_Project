@@ -1,10 +1,10 @@
+import rclpy
+from geometry_msgs.msg import Twist
 import cv2
-import mediapipe as mp
 import numpy as np
+import mediapipe as mp
 import math 
 import pdb; 
-
-static=False
 
 mp_pose = mp.solutions.pose
 mp_draw = mp.solutions.drawing_utils
@@ -19,15 +19,6 @@ def calculate_distance(pose_landmarks, point1, point2):
     x2, y2, z2 = pose_landmarks.landmark[point2].x, pose_landmarks.landmark[point2].y, pose_landmarks.landmark[point2].z
     return np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
 
-def is_right_hand_raised(pose_landmarks):
-    right_shoulder = calculate_distance(pose_landmarks, mp_pose.PoseLandmark.RIGHT_SHOULDER, mp_pose.PoseLandmark.RIGHT_ELBOW)
-    right_wrist = calculate_distance(pose_landmarks, mp_pose.PoseLandmark.RIGHT_WRIST, mp_pose.PoseLandmark.RIGHT_ELBOW)
-
-    if right_shoulder > right_wrist:
-        return True
-    else:
-        return False
-
 def test_left(pose_landmarks):
     left_shoulder = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
     left_elbow = pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
@@ -37,7 +28,6 @@ def test_left(pose_landmarks):
         return True
     else:
         return False
-
 
 def test_right(pose_landmarks):
     right_shoulder = pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER]
@@ -60,11 +50,6 @@ def test_go(pose_landmarks):
     rwrist_pos = [right_wrist.x, right_wrist.y, right_wrist.z]
     lshoulder_pos = [left_shoulder.x, left_shoulder.y, left_shoulder.z]
     rshoulder_pos = [right_shoulder.x, right_shoulder.y, right_shoulder.z]
-
-    print("lw", lwrist_pos)
-    print("rw",rwrist_pos)
-    print("ls",lshoulder_pos)
-    print("rs",rshoulder_pos)
 
     if(is_point_inside_corners(lwrist_pos, rshoulder_pos, lshoulder_pos) and
         is_point_inside_corners(rwrist_pos, rshoulder_pos, lshoulder_pos)):
@@ -95,22 +80,11 @@ def test_stop(pose_landmarks):
     angle_right_elbow = calculate_angle(right_wrist, right_elbow, right_shoulder)
     angle_right_shoulder = calculate_angle(right_wrist, right_shoulder, right_elbow)
 
-    #pdb.set_trace()
-
     if(right_shoulder.y > right_elbow.y and right_elbow > right_wrist.y and 
         angle_right_elbow > 90.0 and angle_right_shoulder < 30.0) or (angle_right_elbow > 110 and angle_right_shoulder < 20):
         return True
     if(left_shoulder.y > left_elbow.y and left_elbow > left_wrist.y and 
         angle_left_elbow > 90.0 and angle_left_shoulder < 30.0) or (angle_left_elbow > 110 and angle_left_shoulder < 20):
-        return True
-    else:
-        return False
-
-def is_left_hand_raised(pose_landmarks):
-    left_shoulder = calculate_distance(pose_landmarks, mp_pose.PoseLandmark.LEFT_SHOULDER, mp_pose.PoseLandmark.LEFT_ELBOW)
-    left_wrist = calculate_distance(pose_landmarks, mp_pose.PoseLandmark.LEFT_WRIST, mp_pose.PoseLandmark.LEFT_ELBOW)
-
-    if left_shoulder > left_wrist:
         return True
     else:
         return False
@@ -123,100 +97,90 @@ def calculate_angle(a, b, c):
 
     return math.degrees(math.acos(cosine_angle))
 
-def check_hand_stop_raised(wrist, elbow, shoulder):
-    # Calculate the angles between the landmarks
-    wrist_to_elbow_angle = calculate_angle(wrist, elbow, wrist)
-    elbow_to_shoulder_angle = calculate_angle(elbow, shoulder, elbow)
-
-    # Check if the angles are within a suitable range
-    is_hand_raised = (90 - wrist_to_elbow_angle < 30) and (90 - elbow_to_shoulder_angle < 30)
-
-    return is_hand_raised
-
-def check_frame(frame,results):
+def recognize_gesture(frame, results):
+    # Placeholder gesture recognition logic
+    # In a real-world scenario, use advanced techniques for gesture recognition
     if results.pose_landmarks:
-            if test_go(results.pose_landmarks):
-                cv2.putText(frame, 'MOVE FORWARD', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
-            elif test_left(results.pose_landmarks):
-                cv2.putText(frame, 'LEFT TURN', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
-            elif test_right(results.pose_landmarks):
-                cv2.putText(frame, 'RIGHT TURN', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
-            elif test_stop(results.pose_landmarks):
-                cv2.putText(frame, 'STOP SIGN', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
+        if test_go(results.pose_landmarks):
+            cv2.putText(frame, 'MOVE FORWARD', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
+            return "FORWARD"
+        elif test_left(results.pose_landmarks):
+            cv2.putText(frame, 'LEFT TURN', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
+            return "LEFT"
+        elif test_right(results.pose_landmarks):
+            cv2.putText(frame, 'RIGHT TURN', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
+            return "RIGHT"
+        elif test_stop(results.pose_landmarks):
+            cv2.putText(frame, 'STOP SIGN', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
+            return "STOP"
+    return None
 
-if(static):
-    fwd = cv2.imread('images/FORWARD.jpg')
-    fwd_im = cv2.cvtColor(fwd, cv2.COLOR_BGR2RGB)
-    fwd_results = pose.process(fwd_im)
-    draw_landmarks(fwd, fwd_results)
-    check_frame(fwd, fwd_results)
-    cv2.imshow('Forward Pose', fwd)
+def teleop_keyboard():
+    rclpy.init()
+    node = rclpy.create_node('teleop_keyboard')
+    pub = node.create_publisher(Twist, 'cmd_vel', 10)
 
-    left = cv2.imread('images/LEFT.jpg')
-    left_im = cv2.cvtColor(left, cv2.COLOR_BGR2RGB)
-    left_results = pose.process(left_im)
-    draw_landmarks(left, left_results)
-    check_frame(left, left_results)
-    cv2.imshow('LEFT Pose', left)
-
-    right = cv2.imread('images/RIGHT.jpg')
-    right_im = cv2.cvtColor(right, cv2.COLOR_BGR2RGB)
-    right_results = pose.process(right_im)
-    draw_landmarks(right, right_results)
-    check_frame(right, right_results)
-    cv2.imshow('RIGHT Pose', right)
-
-    stopl = cv2.imread('images/STOP_LEFT.jpg')
-    stopl_im = cv2.cvtColor(stopl, cv2.COLOR_BGR2RGB)
-    stopl_results = pose.process(stopl_im)
-    draw_landmarks(stopl, stopl_results)
-    check_frame(stopl, stopl_results)
-    cv2.imshow('STOP_LEFT Pose', stopl)
-
-    stopr = cv2.imread('images/STOP_RIGHT.jpg')
-    stopr_im = cv2.cvtColor(stopr, cv2.COLOR_BGR2RGB)
-    stopr_results = pose.process(stopr_im)
-    draw_landmarks(stopr, stopr_results)
-    check_frame(stopr, stopr_results)
-    cv2.imshow('STOP_RIGHT Pose', stopr)
-
-    stop2 = cv2.imread('images/STOP2.jpg')
-    stop2_im = cv2.cvtColor(stop2, cv2.COLOR_BGR2RGB)
-    stop2_results = pose.process(stop2_im)
-    draw_landmarks(stop2, stop2_results)
-    check_frame(stop2, stop2_results)
-    cv2.imshow('STOP2 Pose', stop2)
-
-    cv2.waitKey(0)
-
-    cv2.destroyAllWindows()
-else:
+    # OpenCV initialization for camera capture
     cap = cv2.VideoCapture(0)
 
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
+    try:
+        print('Teleop TurtleBot3 gesture recognition. Press Ctrl+C to exit.')
 
-        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = pose.process(image)
-        draw_landmarks(frame, results)
-        #pdb.set_trace()
-        if results.pose_landmarks:
-            if test_go(results.pose_landmarks):
-                cv2.putText(frame, 'MOVE FORWARD', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
-            elif test_left(results.pose_landmarks):
-                cv2.putText(frame, 'LEFT TURN', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
-            elif test_right(results.pose_landmarks):
-                cv2.putText(frame, 'RIGHT TURN', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
-            elif test_stop(results.pose_landmarks):
-                cv2.putText(frame, 'STOP SIGN', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
+        while rclpy.ok():
+            # Capture video frame
+            ret, frame = cap.read()
+            if not ret:
+                break
 
+            # Process frame to obtain pose landmarks
+            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            results = pose.process(image)
+            draw_landmarks(frame, results)
 
-        cv2.imshow('MediaPipe Pose', frame)
+            # Recognize gesture from the frame
+            gesture = recognize_gesture(frame, results)
 
-        if cv2.waitKey(5) & 0xFF == ord('q'):
-            break
+            # Map gestures to robot movements
+            
+            if gesture == "FORWARD":
+                twist = Twist()
+                twist.linear.x = 0.2
+                twist.linear.z = 0.0
+                # Publish the twist message
+                pub.publish(twist)
+            elif gesture == "RIGHT":
+                twist = Twist()
+                twist.angular.z = 0.5
+                # Publish the twist message
+                pub.publish(twist)
+            elif gesture == "LEFT":
+                twist = Twist()
+                twist.angular.z = -0.5
+                # Publish the twist message
+                pub.publish(twist)
+            elif gesture == "STOP":
+                twist = Twist()
+                twist.linear.x = 0.0
+                twist.angular.z = 0.0
+                # Publish the twist message
+                pub.publish(twist)
 
-    cap.release()
-    cv2.destroyAllWindows()
+            # Display the camera feed
+            cv2.imshow("Gesture Recognition", frame)
+
+            # Wait for a key press and exit on 'Esc'
+            key = cv2.waitKey(1)
+            if key == 27:
+                break
+
+    finally:
+        # Release the camera and destroy OpenCV windows
+        cap.release()
+        cv2.destroyAllWindows()
+
+        # Clean up ROS node
+        pub.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    teleop_keyboard()
