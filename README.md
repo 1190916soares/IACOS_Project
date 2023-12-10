@@ -6,4 +6,4 @@ Before using our solution, it is necessary to properly build the turtlebot3 exam
 
 2. Launch gazebo with ./launch_gazebo.sh
 
-3. Lauch detection by entering running ./launch_detection.sh
+3. Launch detection by running ./launch_detection.sh
